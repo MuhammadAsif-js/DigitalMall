@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ScanLine, ShieldAlert, Zap } from 'lucide-react-native';
+import { getMedicineByBarcode } from '../../lib/api';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   // NEW: State to control the flashlight
   const [isTorchOn, setIsTorchOn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!permission) return <View className="flex-1 bg-slate-950" />;
 
@@ -25,9 +27,27 @@ export default function ScannerScreen() {
     );
   }
 
-  const handleBarcodeScanned = ({ type, data }: { type: string; data: string }) => {
+  const handleBarcodeScanned = async ({ type, data }: { type: string; data: string }) => {
     setScanned(true);
-    Alert.alert("Barcode Scanned!", `Type: ${type}\nData: ${data}`, [{ text: "Scan Next Item", onPress: () => setScanned(false) }]);
+    setIsLoading(true);
+
+    const medicine = await getMedicineByBarcode(data);
+
+    setIsLoading(false);
+
+    if (medicine) {
+      Alert.alert(
+        medicine.name,
+        `Price: Rs. ${medicine.price}`,
+        [{ text: "Scan Next Item", onPress: () => setScanned(false) }]
+      );
+    } else {
+      Alert.alert(
+        "Medicine not found",
+        "Medicine not found in database",
+        [{ text: "Scan Next Item", onPress: () => setScanned(false) }]
+      );
+    }
   };
 
   return (
@@ -67,8 +87,11 @@ export default function ScannerScreen() {
         {/* Container for status text and button, now centered below the box */}
         <View className="items-center w-full mt-10 space-y-4">
           
-          <View className="bg-slate-900/80 px-5 py-2.5 rounded-full border border-slate-800">
-            <Text className="text-slate-300 text-sm font-medium">Waiting for product...</Text>
+          <View className="bg-slate-900/80 px-5 py-2.5 rounded-full border border-slate-800 flex-row items-center gap-2">
+            {isLoading && <ActivityIndicator size="small" color="#10b981" />}
+            <Text className="text-slate-300 text-sm font-medium">
+              {isLoading ? 'Searching database...' : 'Waiting for product...'}
+            </Text>
           </View>
 
           {/* 4. FIX: A centered, working, Tailwind-styled Flashlight toggle button */}
