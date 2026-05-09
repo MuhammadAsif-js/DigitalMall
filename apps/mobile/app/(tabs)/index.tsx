@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ScanLine, ShieldAlert, Zap, ShoppingCart } from 'lucide-react-native';
+import { ScanLine, ShieldAlert, Zap, ShoppingCart, CheckCircle, XCircle } from 'lucide-react-native';
 import { getMedicineByBarcode } from '../../lib/api';
 import { useCartStore } from '../../store/cartStore';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ScannerScreen() {
   const addItem = useCartStore((state) => state.addItem);
@@ -16,6 +18,41 @@ export default function ScannerScreen() {
   // NEW: State to control the flashlight
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  // Animations
+  const pulseOpacity = useSharedValue(0.5);
+  const scannerLineY = useSharedValue(0);
+  const bottomSheetY = useSharedValue(400);
+
+  useEffect(() => {
+    pulseOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.5, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    scannerLineY.value = withRepeat(
+      withSequence(
+        withTiming(200, { duration: 2000, easing: Easing.linear }),
+        withTiming(0, { duration: 2000, easing: Easing.linear })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const animatedPulseStyle = useAnimatedStyle(() => ({
+    opacity: pulseOpacity.value,
+  }));
+
+  const animatedLineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scannerLineY.value }],
+  }));
 
   if (!permission) return <View className="flex-1 bg-slate-950" />;
 
@@ -43,19 +80,27 @@ export default function ScannerScreen() {
 
     if (medicine) {
       addItem({ id: data, name: medicine.name, price: medicine.price });
-      Alert.alert(
-        "Added to Cart",
-        `${medicine.name} (Rs. ${medicine.price}) added to cart.`,
-        [{ text: "Scan Next Item", onPress: () => setScanned(false) }]
-      );
+      setFoundProduct({ name: medicine.name, price: medicine.price });
+      bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
     } else {
-      Alert.alert(
-        "Medicine not found",
-        "Medicine not found in database",
-        [{ text: "Scan Next Item", onPress: () => setScanned(false) }]
-      );
+      setNotFound(true);
+      bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
     }
   };
+
+  const resetScan = () => {
+    bottomSheetY.value = withTiming(400, { duration: 300, easing: Easing.in(Easing.exp) });
+    // Add small delay to let animation finish
+    setTimeout(() => {
+      setScanned(false);
+      setFoundProduct(null);
+      setNotFound(false);
+    }, 300);
+  };
+
+  const animatedBottomSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bottomSheetY.value }],
+  }));
 
   return (
     <View className="flex-1 bg-slate-950">
@@ -77,8 +122,18 @@ export default function ScannerScreen() {
           </Text>
 
           {/* The targeting box (now centered) */}
-          <View className="w-80 h-52 border-2 border-emerald-500 rounded-2xl bg-transparent items-center justify-center overflow-hidden">
-            <View className="absolute top-0 w-full h-0.5 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] opacity-50" />
+          <View className="w-80 h-52 bg-transparent items-center justify-center overflow-hidden relative">
+            {/* Tactical Corners */}
+            <Animated.View style={animatedPulseStyle} className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-500 rounded-tl-xl" />
+            <Animated.View style={animatedPulseStyle} className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-500 rounded-tr-xl" />
+            <Animated.View style={animatedPulseStyle} className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-500 rounded-bl-xl" />
+            <Animated.View style={animatedPulseStyle} className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-500 rounded-br-xl" />
+
+            {/* Scanning Line */}
+            <Animated.View style={[animatedLineStyle, { position: 'absolute', top: 0, width: '100%', height: 2, zIndex: 10 }]}>
+              <View className="w-full h-full bg-emerald-400 shadow-lg shadow-emerald-500/100" />
+            </Animated.View>
+
             <ScanLine size={48} color="#10b981" className="opacity-20" />
           </View>
         </View>
@@ -105,19 +160,65 @@ export default function ScannerScreen() {
 
         </View>
 
+        {/* Found Product Bottom Sheet */}
+        {foundProduct && (
+          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-24 w-full px-6">
+            <View className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-md">
+              <View className="flex-row items-center gap-4 mb-4">
+                <View className="bg-emerald-500/20 p-3 rounded-full">
+                  <CheckCircle size={32} color="#10b981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-emerald-400 font-bold tracking-tight">SUCCESS</Text>
+                  <Text className="text-white text-xl font-bold tracking-tight">{foundProduct.name}</Text>
+                  <Text className="text-slate-400 text-lg">Rs. {foundProduct.price}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
+                <LinearGradient colors={['#059669', '#10b981']} className="py-4 items-center justify-center">
+                  <Text className="text-white font-bold text-lg tracking-tight">Scan Next Item</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Not Found Bottom Sheet */}
+        {notFound && (
+          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-24 w-full px-6">
+            <View className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-md">
+              <View className="flex-row items-center gap-4 mb-4">
+                <View className="bg-rose-500/20 p-3 rounded-full">
+                  <XCircle size={32} color="#f43f5e" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-rose-400 font-bold tracking-tight">NOT FOUND</Text>
+                  <Text className="text-white text-xl font-bold tracking-tight">Unknown Product</Text>
+                  <Text className="text-slate-400 text-lg">Item not in database</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
+                <LinearGradient colors={['#059669', '#10b981']} className="py-4 items-center justify-center">
+                  <Text className="text-white font-bold text-lg tracking-tight">Scan Next Item</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
+
         {/* Floating View Cart Button */}
-        {totalItems > 0 && (
-          <View className="absolute bottom-6 w-full px-4">
+        {totalItems > 0 && !foundProduct && !notFound && (
+          <View className="absolute bottom-24 w-full px-6">
             <TouchableOpacity
-              className="bg-slate-900 px-6 py-4 rounded-2xl flex-row items-center justify-between shadow-lg shadow-black/50 border border-slate-800"
+              className="bg-slate-900/50 px-6 py-4 rounded-3xl flex-row items-center justify-between shadow-2xl border border-white/5 backdrop-blur-md"
               onPress={() => Alert.alert("Cart", "View Cart functionality coming soon")}
             >
               <View className="flex-row items-center gap-3">
-                <View className="bg-emerald-500/20 p-2 rounded-xl">
+                <View className="bg-emerald-500/20 p-2 rounded-2xl">
                   <ShoppingCart size={24} color="#10b981" />
                 </View>
                 <View>
-                  <Text className="text-white font-bold text-lg">View Cart</Text>
+                  <Text className="text-white font-bold text-lg tracking-tight">View Cart</Text>
                   <Text className="text-emerald-500 font-medium">{totalItems} item{totalItems !== 1 ? 's' : ''}</Text>
                 </View>
               </View>
