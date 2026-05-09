@@ -52,22 +52,14 @@ export default function ScannerScreen() {
 
   return (
     <View className="flex-1 bg-slate-950">
-      
-      {/* 1. FIX: Make the Camera a sibling, not a container.
-        Using StyleSheet.absoluteFillObject is fine here.
-      */}
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
-        enableTorch={isTorchOn} // 2. FIX: Connect flashlight state
+        enableTorch={isTorchOn}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ['upc_a', 'upc_e', 'ean13', 'ean8', 'qr'] }}
       />
 
-      {/* 3. FIX: New Full-Screen, Centered Overlay Container.
-        'absolute inset-0' makes it fill the screen on top of the camera,
-        and 'justify-center items-center' centers all children on the screen.
-      */}
       <View className="absolute inset-0 bg-slate-950/60 justify-center items-center px-4">
         
         {/* Everything inside here is centered automatically */}
@@ -94,7 +86,6 @@ export default function ScannerScreen() {
             </Text>
           </View>
 
-          {/* 4. FIX: A centered, working, Tailwind-styled Flashlight toggle button */}
           <TouchableOpacity 
             onPress={() => setIsTorchOn(!isTorchOn)}
             className="mt-6 bg-slate-800/80 px-8 py-3 rounded-full border border-slate-700 active:bg-slate-700 flex-row items-center gap-2 shadow-lg"
