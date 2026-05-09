@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+
 const mockCreateClient = jest.fn();
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));

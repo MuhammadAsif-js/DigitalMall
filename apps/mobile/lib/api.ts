@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 
 export async function getMedicineByBarcode(barcode: string) {
   const { data, error } = await supabase
-    .from('inventory')
+    .from('Inventory')
     .select('name, price, stock_count')
     .eq('barcode', barcode)
     .single();
