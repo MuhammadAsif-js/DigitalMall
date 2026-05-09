@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ScanLine, ShieldAlert, Zap } from 'lucide-react-native';
+import { ScanLine, ShieldAlert, Zap, ShoppingCart } from 'lucide-react-native';
 import { getMedicineByBarcode } from '../../lib/api';
+import { useCartStore } from '../../store/cartStore';
 
 export default function ScannerScreen() {
+  const addItem = useCartStore((state) => state.addItem);
+  const items = useCartStore((state) => state.items);
+
+  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  const totalPrice = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   // NEW: State to control the flashlight
@@ -36,9 +42,10 @@ export default function ScannerScreen() {
     setIsLoading(false);
 
     if (medicine) {
+      addItem({ id: data, name: medicine.name, price: medicine.price });
       Alert.alert(
-        medicine.name,
-        `Price: Rs. ${medicine.price}`,
+        "Added to Cart",
+        `${medicine.name} (Rs. ${medicine.price}) added to cart.`,
         [{ text: "Scan Next Item", onPress: () => setScanned(false) }]
       );
     } else {
@@ -97,6 +104,27 @@ export default function ScannerScreen() {
           </TouchableOpacity>
 
         </View>
+
+        {/* Floating View Cart Button */}
+        {totalItems > 0 && (
+          <View className="absolute bottom-6 w-full px-4">
+            <TouchableOpacity
+              className="bg-slate-900 px-6 py-4 rounded-2xl flex-row items-center justify-between shadow-lg shadow-black/50 border border-slate-800"
+              onPress={() => Alert.alert("Cart", "View Cart functionality coming soon")}
+            >
+              <View className="flex-row items-center gap-3">
+                <View className="bg-emerald-500/20 p-2 rounded-xl">
+                  <ShoppingCart size={24} color="#10b981" />
+                </View>
+                <View>
+                  <Text className="text-white font-bold text-lg">View Cart</Text>
+                  <Text className="text-emerald-500 font-medium">{totalItems} item{totalItems !== 1 ? 's' : ''}</Text>
+                </View>
+              </View>
+              <Text className="text-white font-bold text-xl">Rs. {totalPrice}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
