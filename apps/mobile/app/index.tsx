@@ -44,7 +44,7 @@ export default function MobileLoginScreen() {
         className="flex-1 bg-slate-950"
       >
         {/* Ambient Emerald Background Glow */}
-        <View className="absolute top-1/4 left-0 right-0 h-96 bg-emerald-500/10 rounded-full blur-3xl opacity-40" />
+        <View className="absolute top-1/4 left-0 right-0 h-96 bg-emerald-500/10 rounded-full blur-3xl opacity-40 pointer-events-none" />
 
         <ScrollView 
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
@@ -59,7 +59,7 @@ export default function MobileLoginScreen() {
             <Text className="text-slate-400 text-base text-center">Pharmacy Terminal Login</Text>
           </View>
 
-          <View className="bg-slate-900/60 rounded-3xl p-8 border border-white/10 shadow-2xl">
+          <View className="bg-slate-900/50 rounded-3xl p-8 border border-white/10 shadow-2xl">
             <View className="mb-4">
               <Text className="text-slate-300 text-sm font-medium mb-2 ml-1">Email Address</Text>
               <View className={`flex-row items-center bg-slate-950/50 border rounded-2xl px-4 h-14 transition-colors ${isEmailFocused ? 'border-emerald-500' : 'border-slate-800'}`}>
