@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
-import { Calculator, Settings } from 'lucide-react-native';
+import { Calculator, Settings, TrendingUp } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 
 export default function TabLayout() {
@@ -58,6 +58,18 @@ export default function TabLayout() {
           )
         }}
       />
-    </Tabs>
+
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, size, focused }) => (
+            <View className={`p-2 rounded-full ${focused ? 'bg-emerald-500/20' : 'bg-transparent'}`}>
+              <TrendingUp size={24} color={color} />
+            </View>
+          )
+        }}
+      />
+</Tabs>
   );
 }
