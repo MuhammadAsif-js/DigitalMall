@@ -6,6 +6,7 @@ import { getMedicineByBarcode } from '../../lib/api';
 import { useCartStore } from '../../store/cartStore';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import CheckoutModal from '../../src/components/CheckoutModal';
 
 export default function ScannerScreen() {
   const addItem = useCartStore((state) => state.addItem);
@@ -20,6 +21,7 @@ export default function ScannerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [isCheckoutVisible, setIsCheckoutVisible] = useState(false);
 
   // Animations
   const pulseOpacity = useSharedValue(0.5);
@@ -211,7 +213,7 @@ export default function ScannerScreen() {
           <View className="absolute bottom-24 w-full px-6">
             <TouchableOpacity
               className="bg-slate-900/50 px-6 py-4 rounded-3xl flex-row items-center justify-between shadow-2xl border border-white/5 backdrop-blur-md"
-              onPress={() => Alert.alert("Cart", "View Cart functionality coming soon")}
+              onPress={() => setIsCheckoutVisible(true)}
             >
               <View className="flex-row items-center gap-3">
                 <View className="bg-emerald-500/20 p-2 rounded-2xl">
@@ -226,6 +228,12 @@ export default function ScannerScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Checkout Modal */}
+        <CheckoutModal
+          visible={isCheckoutVisible}
+          onClose={() => setIsCheckoutVisible(false)}
+        />
       </View>
     </View>
   );
