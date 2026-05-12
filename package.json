@@ -4,5 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*"
-  ]
+  ],
+  "overrides": {
+    "react-native-worklets": "0.5.1"
+  }
 }

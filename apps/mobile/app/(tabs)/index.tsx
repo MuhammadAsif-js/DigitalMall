@@ -15,7 +15,6 @@ export default function ScannerScreen() {
   const totalPrice = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  // NEW: State to control the flashlight
   const [isTorchOn, setIsTorchOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
@@ -54,10 +53,13 @@ export default function ScannerScreen() {
     transform: [{ translateY: scannerLineY.value }],
   }));
 
+  const animatedBottomSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bottomSheetY.value }],
+  }));
+
   if (!permission) return <View className="flex-1 bg-slate-950" />;
 
   if (!permission.granted) {
-    // Keep your excellent original denied access screen
     return (
       <View className="flex-1 bg-slate-950 items-center justify-center px-6">
         <ShieldAlert size={48} color="#ef4444" />
@@ -75,7 +77,6 @@ export default function ScannerScreen() {
     setIsLoading(true);
 
     const medicine = await getMedicineByBarcode(data);
-
     setIsLoading(false);
 
     if (medicine) {
@@ -90,7 +91,6 @@ export default function ScannerScreen() {
 
   const resetScan = () => {
     bottomSheetY.value = withTiming(400, { duration: 300, easing: Easing.in(Easing.exp) });
-    // Add small delay to let animation finish
     setTimeout(() => {
       setScanned(false);
       setFoundProduct(null);
@@ -98,12 +98,8 @@ export default function ScannerScreen() {
     }, 300);
   };
 
-  const animatedBottomSheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bottomSheetY.value }],
-  }));
-
   return (
-    <View className="flex-1 bg-slate-950">
+    <View className="flex-1 bg-black">
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
@@ -112,24 +108,32 @@ export default function ScannerScreen() {
         barcodeScannerSettings={{ barcodeTypes: ['upc_a', 'upc_e', 'ean13', 'ean8', 'qr'] }}
       />
 
-      <View className="absolute inset-0 bg-slate-950/60 justify-center items-center px-4">
+      {/* FIXED: The "Massive Border" trick creates a crystal clear physical hole for the camera */}
+      <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+        <View style={{
+          width: 320,
+          height: 250,
+          borderColor: 'rgba(2, 6, 23, 0.80)', // Dark glass color
+          borderWidth: 1000, // Forces the glass to cover the rest of the screen
+          position: 'absolute',
+          marginTop: -80 // Aligns perfectly with your brackets
+        }} />
+      </View>
+
+      {/* FOREGROUND UI */}
+      <View style={StyleSheet.absoluteFillObject} className="justify-center items-center px-4" pointerEvents="box-none">
         
-        {/* Everything inside here is centered automatically */}
-        
-        <View className="items-center w-full">
+        <View className="items-center w-full mt-[-80px]" pointerEvents="none">
           <Text className="text-white text-xl font-bold tracking-widest mb-12 shadow-black shadow-lg text-center">
             ALIGN BARCODE
           </Text>
 
-          {/* The targeting box (now centered) */}
-          <View className="w-80 h-52 bg-transparent items-center justify-center overflow-hidden relative">
-            {/* Tactical Corners */}
+          <View className="w-80 h-[250px] bg-transparent items-center justify-center overflow-hidden relative">
             <Animated.View style={animatedPulseStyle} className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-500 rounded-tl-xl" />
             <Animated.View style={animatedPulseStyle} className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-500 rounded-tr-xl" />
             <Animated.View style={animatedPulseStyle} className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-500 rounded-bl-xl" />
             <Animated.View style={animatedPulseStyle} className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-500 rounded-br-xl" />
 
-            {/* Scanning Line */}
             <Animated.View style={[animatedLineStyle, { position: 'absolute', top: 0, width: '100%', height: 2, zIndex: 10 }]}>
               <View className="w-full h-full bg-emerald-400 shadow-lg shadow-emerald-500/100" />
             </Animated.View>
@@ -138,9 +142,7 @@ export default function ScannerScreen() {
           </View>
         </View>
         
-        {/* Container for status text and button, now centered below the box */}
-        <View className="items-center w-full mt-10 space-y-4">
-          
+        <View className="items-center w-full mt-12 gap-y-4">
           <View className="bg-slate-900/80 px-5 py-2.5 rounded-full border border-slate-800 flex-row items-center gap-2">
             {isLoading && <ActivityIndicator size="small" color="#10b981" />}
             <Text className="text-slate-300 text-sm font-medium">
@@ -150,20 +152,19 @@ export default function ScannerScreen() {
 
           <TouchableOpacity 
             onPress={() => setIsTorchOn(!isTorchOn)}
-            className="mt-6 bg-slate-800/80 px-8 py-3 rounded-full border border-slate-700 active:bg-slate-700 flex-row items-center gap-2 shadow-lg"
+            className="bg-slate-800/80 px-8 py-3 rounded-full border border-slate-700 active:bg-slate-700 flex-row items-center gap-2 shadow-lg"
           >
             <Zap size={18} color={isTorchOn ? '#10b981' : 'white'} />
             <Text className="text-white font-medium text-lg">
               {isTorchOn ? 'Turn Flashlight OFF' : 'Turn Flashlight ON'}
             </Text>
           </TouchableOpacity>
-
         </View>
 
-        {/* Found Product Bottom Sheet */}
+        {/* BOTTOM SHEETS */}
         {foundProduct && (
-          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-24 w-full px-6">
-            <View className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-md">
+          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-28 w-full px-6">
+            <View className="bg-slate-900/95 p-6 rounded-3xl border border-emerald-500/20 shadow-2xl">
               <View className="flex-row items-center gap-4 mb-4">
                 <View className="bg-emerald-500/20 p-3 rounded-full">
                   <CheckCircle size={32} color="#10b981" />
@@ -174,7 +175,7 @@ export default function ScannerScreen() {
                   <Text className="text-slate-400 text-lg">Rs. {foundProduct.price}</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
+              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20 mt-2">
                 <LinearGradient colors={['#059669', '#10b981']} className="py-4 items-center justify-center">
                   <Text className="text-white font-bold text-lg tracking-tight">Scan Next Item</Text>
                 </LinearGradient>
@@ -183,10 +184,9 @@ export default function ScannerScreen() {
           </Animated.View>
         )}
 
-        {/* Not Found Bottom Sheet */}
         {notFound && (
-          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-24 w-full px-6">
-            <View className="bg-slate-900/50 p-6 rounded-3xl border border-white/5 shadow-2xl backdrop-blur-md">
+          <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-28 w-full px-6">
+            <View className="bg-slate-900/95 p-6 rounded-3xl border border-rose-500/20 shadow-2xl">
               <View className="flex-row items-center gap-4 mb-4">
                 <View className="bg-rose-500/20 p-3 rounded-full">
                   <XCircle size={32} color="#f43f5e" />
@@ -197,20 +197,19 @@ export default function ScannerScreen() {
                   <Text className="text-slate-400 text-lg">Item not in database</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
-                <LinearGradient colors={['#059669', '#10b981']} className="py-4 items-center justify-center">
-                  <Text className="text-white font-bold text-lg tracking-tight">Scan Next Item</Text>
+              <TouchableOpacity onPress={resetScan} className="overflow-hidden rounded-2xl shadow-lg mt-2">
+                <LinearGradient colors={['#475569', '#334155']} className="py-4 items-center justify-center">
+                  <Text className="text-white font-bold text-lg tracking-tight">Try Again</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           </Animated.View>
         )}
 
-        {/* Floating View Cart Button */}
         {totalItems > 0 && !foundProduct && !notFound && (
-          <View className="absolute bottom-24 w-full px-6">
+          <View className="absolute bottom-28 w-full px-6">
             <TouchableOpacity
-              className="bg-slate-900/50 px-6 py-4 rounded-3xl flex-row items-center justify-between shadow-2xl border border-white/5 backdrop-blur-md"
+              className="bg-slate-900/95 px-6 py-4 rounded-3xl flex-row items-center justify-between shadow-2xl border border-emerald-500/30"
               onPress={() => Alert.alert("Cart", "View Cart functionality coming soon")}
             >
               <View className="flex-row items-center gap-3">

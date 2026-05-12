@@ -1,61 +1,33 @@
 import { Tabs } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
-import { Calculator, Settings } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
+import { Scan, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: true,
-        headerStyle: { backgroundColor: '#020617', borderBottomWidth: 1, borderBottomColor: '#1e293b' },
-        headerTintColor: '#ffffff',
-        headerTitleStyle: { fontWeight: 'bold', letterSpacing: -0.5 },
-        tabBarBackground: () => (
-          <BlurView
-            intensity={80}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-            className="rounded-full overflow-hidden"
-          />
-        ),
+        headerShown: false, // THIS DESTROYS THE UGLY WHITE HEADER
         tabBarStyle: {
-          position: 'absolute',
-          bottom: 24,
-          left: 24,
-          right: 24,
-          elevation: 0,
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          height: 64,
-          borderRadius: 9999,
-          paddingBottom: Platform.OS === 'ios' ? 0 : 0,
+          backgroundColor: '#020617', // Deep slate-950 for the Midnight theme
+          borderTopColor: '#1e293b', 
+          height: 65,
+          paddingBottom: 10,
+          paddingTop: 10,
         },
-        tabBarShowLabel: false,
-        tabBarActiveTintColor: '#34d399', // emerald-400
-        tabBarInactiveTintColor: '#64748b', // slate-500
-      }}
-    >
+        tabBarActiveTintColor: '#10b981', // Emerald green
+        tabBarInactiveTintColor: '#64748b', // Muted slate
+      }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Register',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View className={`p-2 rounded-full ${focused ? 'bg-emerald-500/20' : 'bg-transparent'}`}>
-              <Calculator size={24} color={color} />
-            </View>
-          )
+          title: 'Scanner',
+          tabBarIcon: ({ color }) => <Scan size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View className={`p-2 rounded-full ${focused ? 'bg-emerald-500/20' : 'bg-transparent'}`}>
-              <Settings size={24} color={color} />
-            </View>
-          )
+          tabBarIcon: ({ color }) => <Settings size={24} color={color} />,
         }}
       />
     </Tabs>
