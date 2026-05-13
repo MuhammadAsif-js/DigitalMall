@@ -1,11 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AddProductModal from "@/components/inventory/AddProductModal";
 import { Plus } from "lucide-react";
 
+interface InventoryItem {
+  id: string;
+  barcode: string;
+  name: string;
+  price: number;
+  stock: number;
+}
+
 export default function InventoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchInventory() {
+      try {
+        const response = await fetch('/api/inventory');
+        if (response.ok) {
+          const data = await response.json();
+          setInventory(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchInventory();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#020617] p-8">
@@ -25,21 +52,47 @@ export default function InventoryPage() {
         </button>
       </div>
 
-      {/* Placeholder for Data Table (Day 8) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
-        <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4">
-          <Plus className="w-8 h-8 text-slate-500" />
-        </div>
-        <h3 className="text-xl font-semibold text-white mb-2">No products yet</h3>
-        <p className="text-slate-400 max-w-sm mb-6">
-          Get started by adding your first product to the inventory system.
-        </p>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors border border-slate-700"
-        >
-          Add First Product
-        </button>
+      {/* Data Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-lg">
+        {loading ? (
+          <div className="p-8 flex items-center justify-center min-h-[400px] text-slate-400">
+            Loading inventory...
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-950/50 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Barcode</th>
+                  <th className="px-6 py-4 font-medium">Product Name</th>
+                  <th className="px-6 py-4 font-medium">Price</th>
+                  <th className="px-6 py-4 font-medium">Stock</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {inventory.length > 0 ? (
+                  inventory.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-800/30 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-slate-300">{item.barcode}</td>
+                      <td className="px-6 py-4 text-white font-medium">{item.name}</td>
+                      <td className="px-6 py-4 text-slate-300">Rs. {item.price}</td>
+                      <td className="px-6 py-4 text-slate-300">{item.stock}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-slate-400">
+                      No products found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <AddProductModal
