@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Barcode, Package, DollarSign, Layers, Save, X } from "lucide-react";
+import { Barcode, Package, DollarSign, Layers, Save, X, Search, Loader2 } from "lucide-react";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -13,6 +13,24 @@ export default function AddProductModal({ isOpen, onClose }: AddProductModalProp
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [isFetching, setIsFetching] = useState(false);
+
+  const handleFetchDetails = async () => {
+    if (!barcode) return;
+    setIsFetching(true);
+    try {
+      const response = await fetch(`/api/products/lookup/${barcode}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.name) setName(data.name);
+        if (data.suggestedPrice) setPrice(data.suggestedPrice.toString());
+      }
+    } catch (error) {
+      console.error("Failed to fetch product details:", error);
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,19 +75,34 @@ export default function AddProductModal({ isOpen, onClose }: AddProductModalProp
             <label htmlFor="barcode" className="block text-sm font-medium text-slate-300">
               Barcode
             </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Barcode className="h-5 w-5 text-slate-500" />
+            <div className="relative flex items-center gap-2">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Barcode className="h-5 w-5 text-slate-500" />
+                </div>
+                <input
+                  id="barcode"
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  placeholder="Scan or enter barcode"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  required
+                />
               </div>
-              <input
-                id="barcode"
-                type="text"
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                placeholder="Scan or enter barcode"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                required
-              />
+              <button
+                type="button"
+                onClick={handleFetchDetails}
+                disabled={isFetching || !barcode}
+                className="flex items-center justify-center p-2.5 bg-slate-800 border border-slate-700 rounded-lg text-emerald-400 hover:bg-slate-700 hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Fetch Details"
+              >
+                {isFetching ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Search className="w-5 h-5" />
+                )}
+              </button>
             </div>
           </div>
 
