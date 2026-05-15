@@ -7,7 +7,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { price, stock } = body;
+    const { name, price, costPrice, stock } = body;
 
     // Here we would typically validate the data and update the database.
     // For this mock, we just return a success response.
@@ -16,7 +16,9 @@ export async function PATCH(
       message: "Item updated",
       data: {
         id,
+        name,
         price,
+        costPrice,
         stock
       }
     });
