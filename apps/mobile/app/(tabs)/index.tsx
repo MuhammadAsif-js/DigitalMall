@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ScanLine, ShieldAlert, Zap, ShoppingCart, CheckCircle, XCircle } from 'lucide-react-native';
-import { getMedicineByBarcode } from '../../lib/api';
 import { useCartStore } from '../../store/cartStore';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const MOCK_INVENTORY = [
+  { id: '1', barcode: '123456789', name: 'Panadol Extra', price: 150, costPrice: 100, stock: 50 },
+  { id: '2', barcode: '987654321', name: 'Brufen 400mg', price: 120, costPrice: 80, stock: 30 }
+];
+
+const mockInventoryLookup = (barcode: string) => {
+  return MOCK_INVENTORY.find(item => item.barcode === barcode) || null;
+};
 
 export default function ScannerScreen() {
   const addItem = useCartStore((state) => state.addItem);
@@ -19,6 +27,7 @@ export default function ScannerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Animations
   const pulseOpacity = useSharedValue(0.5);
@@ -73,23 +82,44 @@ export default function ScannerScreen() {
   }
 
   const handleBarcodeScanned = async ({ type, data }: { type: string; data: string }) => {
+    if (scanned) return;
     setScanned(true);
     setIsLoading(true);
 
-    const medicine = await getMedicineByBarcode(data);
+    // Simulate small delay for mock lookup
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const medicine = mockInventoryLookup(data);
     setIsLoading(false);
 
     if (medicine) {
-      addItem({ id: data, name: medicine.name, price: medicine.price });
+      addItem({
+        id: medicine.id,
+        barcode: medicine.barcode,
+        name: medicine.name,
+        price: medicine.price,
+        costPrice: medicine.costPrice
+      });
       setFoundProduct({ name: medicine.name, price: medicine.price });
       bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
+
+      scanTimeoutRef.current = setTimeout(() => {
+        resetScan();
+      }, 2000);
     } else {
       setNotFound(true);
       bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
+
+      scanTimeoutRef.current = setTimeout(() => {
+        resetScan();
+      }, 2000);
     }
   };
 
   const resetScan = () => {
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
     bottomSheetY.value = withTiming(400, { duration: 300, easing: Easing.in(Easing.exp) });
     setTimeout(() => {
       setScanned(false);
@@ -97,6 +127,14 @@ export default function ScannerScreen() {
       setNotFound(false);
     }, 300);
   };
+
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <View className="flex-1 bg-black">
@@ -171,7 +209,7 @@ export default function ScannerScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-emerald-400 font-bold tracking-tight">SUCCESS</Text>
-                  <Text className="text-white text-xl font-bold tracking-tight">{foundProduct.name}</Text>
+                  <Text className="text-white text-xl font-bold tracking-tight">Added {foundProduct.name} to Cart</Text>
                   <Text className="text-slate-400 text-lg">Rs. {foundProduct.price}</Text>
                 </View>
               </View>
