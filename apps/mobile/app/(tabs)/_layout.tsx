@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Scan, Settings } from 'lucide-react-native';
+import { Scan, Settings, ShoppingCart } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -21,6 +21,13 @@ export default function TabLayout() {
         options={{
           title: 'Scanner',
           tabBarIcon: ({ color }) => <Scan size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          title: 'Cart',
+          tabBarIcon: ({ color }) => <ShoppingCart size={24} color={color} />,
         }}
       />
       <Tabs.Screen
