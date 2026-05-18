@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ScanLine, ShieldAlert, Zap, ShoppingCart, CheckCircle, XCircle } from 'lucide-react-native';
+import { ScanLine, ShieldAlert, Zap, ShoppingCart, CheckCircle, XCircle, Keyboard, X } from 'lucide-react-native';
 import { useCartStore } from '../../store/cartStore';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,12 +27,15 @@ export default function ScannerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState('');
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Animations
   const pulseOpacity = useSharedValue(0.5);
   const scannerLineY = useSharedValue(0);
   const bottomSheetY = useSharedValue(400);
+  const manualBottomSheetY = useSharedValue(400);
 
   useEffect(() => {
     pulseOpacity.value = withRepeat(
@@ -64,6 +67,10 @@ export default function ScannerScreen() {
 
   const animatedBottomSheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: bottomSheetY.value }],
+  }));
+
+  const animatedManualSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: manualBottomSheetY.value }],
   }));
 
   if (!permission) return <View className="flex-1 bg-slate-950" />;
@@ -113,6 +120,56 @@ export default function ScannerScreen() {
         resetScan();
       }, 2000);
     }
+  };
+
+
+  const openManualEntry = () => {
+    setIsManualEntryOpen(true);
+    setManualBarcode('');
+    manualBottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
+  };
+
+  const closeManualEntry = () => {
+    manualBottomSheetY.value = withTiming(400, { duration: 300, easing: Easing.in(Easing.exp) });
+    setTimeout(() => {
+      setIsManualEntryOpen(false);
+      setManualBarcode('');
+    }, 300);
+  };
+
+  const handleManualSearch = () => {
+    if (!manualBarcode.trim()) return;
+
+    setIsLoading(true);
+    closeManualEntry();
+
+    setTimeout(() => {
+      const medicine = mockInventoryLookup(manualBarcode);
+      setIsLoading(false);
+
+      if (medicine) {
+        addItem({
+          id: medicine.id,
+          barcode: medicine.barcode,
+          name: medicine.name,
+          price: medicine.price,
+          costPrice: medicine.costPrice
+        });
+        setFoundProduct({ name: medicine.name, price: medicine.price });
+        bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
+
+        scanTimeoutRef.current = setTimeout(() => {
+          resetScan();
+        }, 2000);
+      } else {
+        setNotFound(true);
+        bottomSheetY.value = withTiming(0, { duration: 400, easing: Easing.out(Easing.exp) });
+
+        scanTimeoutRef.current = setTimeout(() => {
+          resetScan();
+        }, 2000);
+      }
+    }, 300);
   };
 
   const resetScan = () => {
@@ -197,9 +254,46 @@ export default function ScannerScreen() {
               {isTorchOn ? 'Turn Flashlight OFF' : 'Turn Flashlight ON'}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={openManualEntry}
+            className="bg-slate-800/80 px-8 py-3 rounded-full border border-slate-700 active:bg-slate-700 flex-row items-center gap-2 shadow-lg mt-2"
+          >
+            <Keyboard size={18} color="white" />
+            <Text className="text-white font-medium text-lg">
+              Type Barcode Manually
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* BOTTOM SHEETS */}
+        {isManualEntryOpen && (
+          <Animated.View style={animatedManualSheetStyle} className="absolute bottom-0 w-full rounded-t-3xl bg-slate-900 border-t border-slate-800 shadow-2xl pb-10">
+            <View className="px-6 pt-6 pb-4 flex-row justify-between items-center border-b border-slate-800/50">
+              <Text className="text-white font-bold text-xl tracking-tight">Enter Barcode</Text>
+              <TouchableOpacity onPress={closeManualEntry} className="p-2 bg-slate-800 rounded-full">
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            <View className="p-6">
+              <TextInput
+                value={manualBarcode}
+                onChangeText={setManualBarcode}
+                placeholder="000000000000"
+                placeholderTextColor="#334155"
+                keyboardType="number-pad"
+                autoFocus
+                className="w-full bg-slate-950 text-white font-bold text-4xl text-center py-6 rounded-2xl border border-slate-800 mb-6 tracking-widest"
+              />
+              <TouchableOpacity onPress={handleManualSearch} className="overflow-hidden rounded-2xl shadow-lg shadow-emerald-500/20">
+                <LinearGradient colors={['#059669', '#10b981']} className="py-4 items-center justify-center">
+                  <Text className="text-white font-bold text-xl tracking-tight">Search Database</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
+
         {foundProduct && (
           <Animated.View style={animatedBottomSheetStyle} className="absolute bottom-28 w-full px-6">
             <View className="bg-slate-900/95 p-6 rounded-3xl border border-emerald-500/20 shadow-2xl">
