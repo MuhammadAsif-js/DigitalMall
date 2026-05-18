@@ -27,7 +27,7 @@ export default function ScannerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
   const [notFound, setNotFound] = useState(false);
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
   const pulseOpacity = useSharedValue(0.5);
@@ -65,6 +65,15 @@ export default function ScannerScreen() {
   const animatedBottomSheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: bottomSheetY.value }],
   }));
+
+  // FIXED: Moved this cleanup useEffect ABOVE the early returns!
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!permission) return <View className="flex-1 bg-slate-950" />;
 
@@ -128,14 +137,6 @@ export default function ScannerScreen() {
     }, 300);
   };
 
-  useEffect(() => {
-    return () => {
-      if (scanTimeoutRef.current) {
-        clearTimeout(scanTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <View className="flex-1 bg-black">
       <CameraView
@@ -143,7 +144,21 @@ export default function ScannerScreen() {
         facing="back"
         enableTorch={isTorchOn}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-        barcodeScannerSettings={{ barcodeTypes: ['upc_a', 'upc_e', 'ean13', 'ean8', 'qr'] }}
+       barcodeScannerSettings={{ 
+          barcodeTypes: [
+            'upc_a', 
+            'upc_e', 
+            'ean13', 
+            'ean8', 
+            'qr', 
+            'code128', 
+            'code39', 
+            'code93', 
+            'itf14', 
+            'datamatrix', 
+            'pdf417'
+          ] 
+        }}
       />
 
       {/* FIXED: The "Massive Border" trick creates a crystal clear physical hole for the camera */}
