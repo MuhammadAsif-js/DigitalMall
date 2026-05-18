@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, Alert } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
 import { useCartStore } from '../../store/cartStore';
 import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react-native';
 
@@ -7,15 +8,42 @@ export default function CartScreen() {
   const { items, updateQuantity, updateCustomPrice, removeItem, clearCart, getTotalPrice } = useCartStore();
   const [localPrices, setLocalPrices] = useState<Record<string, string>>({});
 
+  const translateY = useSharedValue(1000);
+  const [isTenderVisible, setIsTenderVisible] = useState(false);
+  const [cashReceived, setCashReceived] = useState('');
+
   const handleCheckout = () => {
-    // Calculate total cost and profit
+    setIsTenderVisible(true);
+    translateY.value = withSpring(0, { damping: 20, stiffness: 90 });
+  };
+
+const resetTenderState = () => {
+    setIsTenderVisible(false);
+    setCashReceived('');
+  };
+
+  const closeTender = () => {
+    translateY.value = withTiming(1000, { duration: 300 }, () => {
+      runOnJS(resetTenderState)();
+    });
+  };
+
+  const confirmSale = () => {
     const totalRevenue = getTotalPrice();
     const totalCost = items.reduce((total, item) => total + (item.costPrice * item.quantity), 0);
     const profit = totalRevenue - totalCost;
 
     console.log(`Checkout complete! Total Revenue: Rs. ${totalRevenue}, Profit: Rs. ${profit}`);
     clearCart();
+    closeTender();
+    Alert.alert("Success", "Sale Successful");
   };
+
+  const tenderStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   const handlePriceChange = (id: string, text: string) => {
     setLocalPrices(prev => ({ ...prev, [id]: text }));
@@ -119,6 +147,75 @@ export default function CartScreen() {
           >
             <Text className="text-white font-bold text-lg tracking-tight">Complete Checkout</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Tender Screen Bottom Sheet */}
+      {isTenderVisible && (
+        <View style={StyleSheet.absoluteFillObject} className="z-50 bg-black/50 justify-end">
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeTender}
+            activeOpacity={1}
+          />
+          <Animated.View style={[tenderStyle]} className="bg-slate-900 rounded-t-3xl border-t border-slate-800 p-6 shadow-2xl">
+            <Text className="text-white text-3xl font-bold tracking-tight mb-6 text-center">
+              Total Due: Rs. {getTotalPrice()}
+            </Text>
+
+            <Text className="text-slate-400 text-lg mb-2">Cash Received</Text>
+            <TextInput
+              className="bg-slate-950 text-emerald-400 font-bold text-4xl px-4 py-4 rounded-2xl border border-slate-700 mb-6 text-center"
+              keyboardType="number-pad"
+              value={cashReceived}
+              onChangeText={setCashReceived}
+              placeholder="0"
+              placeholderTextColor="#334155"
+            />
+
+            <View className="flex-row justify-between mb-6">
+              <TouchableOpacity
+                onPress={() => setCashReceived(getTotalPrice().toString())}
+                className="bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 flex-1 mr-2 items-center"
+              >
+                <Text className="text-white font-bold">Exact</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setCashReceived('500')}
+                className="bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 flex-1 mr-2 items-center"
+              >
+                <Text className="text-white font-bold">Rs. 500</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setCashReceived('1000')}
+                className="bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 flex-1 mr-2 items-center"
+              >
+                <Text className="text-white font-bold">Rs. 1000</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setCashReceived('5000')}
+                className="bg-slate-800 px-4 py-3 rounded-xl border border-slate-700 flex-1 items-center"
+              >
+                <Text className="text-white font-bold">Rs. 5000</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="bg-slate-800 p-4 rounded-2xl mb-6 items-center border border-slate-700">
+              <Text className="text-slate-400 text-lg mb-1">Change Due</Text>
+              <Text className="text-emerald-400 text-3xl font-bold">
+                Rs. {cashReceived && parseFloat(cashReceived) >= getTotalPrice() ? parseFloat(cashReceived) - getTotalPrice() : 0}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={confirmSale}
+              disabled={!cashReceived || parseFloat(cashReceived) < getTotalPrice()}
+              className={`py-5 rounded-2xl items-center justify-center shadow-lg ${(!cashReceived || parseFloat(cashReceived) < getTotalPrice()) ? 'bg-slate-700' : 'bg-emerald-600 shadow-emerald-600/20'}`}
+            >
+              <Text className={`font-bold text-xl tracking-tight ${(!cashReceived || parseFloat(cashReceived) < getTotalPrice()) ? 'text-slate-400' : 'text-white'}`}>Confirm Sale</Text>
+            </TouchableOpacity>
+            <View className="h-4" />
+          </Animated.View>
         </View>
       )}
     </View>
