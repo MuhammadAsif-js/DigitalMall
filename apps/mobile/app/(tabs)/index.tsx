@@ -16,6 +16,7 @@ const mockInventoryLookup = (barcode: string) => {
 };
 
 export default function ScannerScreen() {
+  // --- 1. ALL HOOKS AT THE TOP ---
   const addItem = useCartStore((state) => state.addItem);
   const items = useCartStore((state) => state.items);
 
@@ -27,13 +28,13 @@ export default function ScannerScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [foundProduct, setFoundProduct] = useState<{name: string, price: number} | null>(null);
   const [notFound, setNotFound] = useState(false);
-<<<<<<< HEAD
-  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-=======
+  
+  // Jules' new state for the manual entry
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [manualBarcode, setManualBarcode] = useState('');
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
->>>>>>> 299226b59a0b8cc3171180adfad22c34ef4c26c0
+  
+  // Fix for the timeout typing issue
+ const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animations
   const pulseOpacity = useSharedValue(0.5);
@@ -73,8 +74,11 @@ export default function ScannerScreen() {
     transform: [{ translateY: bottomSheetY.value }],
   }));
 
-<<<<<<< HEAD
-  // FIXED: Moved this cleanup useEffect ABOVE the early returns!
+  const animatedManualSheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: manualBottomSheetY.value }],
+  }));
+
+  // FIXED: Your cleanup useEffect is safely ABOVE the early returns!
   useEffect(() => {
     return () => {
       if (scanTimeoutRef.current) {
@@ -82,12 +86,8 @@ export default function ScannerScreen() {
       }
     };
   }, []);
-=======
-  const animatedManualSheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: manualBottomSheetY.value }],
-  }));
->>>>>>> 299226b59a0b8cc3171180adfad22c34ef4c26c0
 
+  // --- 2. EARLY RETURNS ---
   if (!permission) return <View className="flex-1 bg-slate-950" />;
 
   if (!permission.granted) {
@@ -103,6 +103,7 @@ export default function ScannerScreen() {
     );
   }
 
+  // --- 3. LOGIC FUNCTIONS ---
   const handleBarcodeScanned = async ({ type, data }: { type: string; data: string }) => {
     if (scanned) return;
     setScanned(true);
@@ -136,7 +137,6 @@ export default function ScannerScreen() {
       }, 2000);
     }
   };
-
 
   const openManualEntry = () => {
     setIsManualEntryOpen(true);
@@ -200,6 +200,7 @@ export default function ScannerScreen() {
     }, 300);
   };
 
+  // --- 4. RENDER UI ---
   return (
     <View className="flex-1 bg-black">
       <CameraView
@@ -207,7 +208,8 @@ export default function ScannerScreen() {
         facing="back"
         enableTorch={isTorchOn}
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-       barcodeScannerSettings={{ 
+        barcodeScannerSettings={{ 
+          // FIXED: Your robust barcode types array is here!
           barcodeTypes: [
             'upc_a', 
             'upc_e', 
@@ -224,19 +226,17 @@ export default function ScannerScreen() {
         }}
       />
 
-      {/* FIXED: The "Massive Border" trick creates a crystal clear physical hole for the camera */}
       <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
         <View style={{
           width: 320,
           height: 250,
-          borderColor: 'rgba(2, 6, 23, 0.80)', // Dark glass color
-          borderWidth: 1000, // Forces the glass to cover the rest of the screen
+          borderColor: 'rgba(2, 6, 23, 0.80)', 
+          borderWidth: 1000, 
           position: 'absolute',
-          marginTop: -80 // Aligns perfectly with your brackets
+          marginTop: -80 
         }} />
       </View>
 
-      {/* FOREGROUND UI */}
       <View style={StyleSheet.absoluteFillObject} className="justify-center items-center px-4" pointerEvents="box-none">
         
         <View className="items-center w-full mt-[-80px]" pointerEvents="none">
